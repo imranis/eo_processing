@@ -1,4 +1,3 @@
-import logging
 import openeo
 import shapely.geometry
 import LCE
@@ -31,8 +30,3 @@ def ndvi():
     ndvi.download('ndvi_example.tiff', format='GTIFF')
     LCE.plot_result_5_pct('ndvi_example.tiff')
     BCET.plot_result_bcet('ndvi_example.tiff')
-
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    ndvi()

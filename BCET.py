@@ -41,6 +41,7 @@ def plot_result_bcet(file_path):
     Gmax = 255
     Gmean = 120
 
+# RGB image
     R = BCET(Gmin, Gmax, Gmean, img[:, :, 0])
     G = BCET(Gmin, Gmax, Gmean, img[:, :, 1])
     B = BCET(Gmin, Gmax, Gmean, img[:, :, 2])
@@ -51,7 +52,7 @@ def plot_result_bcet(file_path):
     axs[0, 0].imshow(img)
     axs[0, 0].set_title('Input Image')
     axs[0, 1].imshow(Output)
-    axs[0, 1].set_title('Output Image')
+    axs[0, 1].set_title('Image after BCET')
 
     colors = ['r', 'g', 'b']
     for i, color in enumerate(colors):
@@ -59,5 +60,5 @@ def plot_result_bcet(file_path):
         axs[1, 1].hist(Output[:, :, i].flatten(), bins=256, color=color, alpha=0.5)
 
     axs[1, 0].set_title('Histogram of the Input Image')
-    axs[1, 1].set_title('Histogram of the Output Image')
+    axs[1, 1].set_title('Histogram of the Image after BCET')
     plt.show()
