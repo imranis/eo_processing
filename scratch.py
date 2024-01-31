@@ -119,3 +119,62 @@ def plot_result_bcet(file_path):
         axs[1, 0].set_title('Histogram of the Input Image')
         axs[1, 1].set_title('Histogram of the Image after BCET')
         plt.show()
+
+
+######################
+        
+        import openeo
+from ipywidgets import Button, DatePicker
+from IPython.display import display
+import LCE
+import BCET
+from openeo.processes import ProcessBuilder
+
+
+def tcc(polygon):
+    # Create date picker widgets for the start and end time
+    start_time_picker = DatePicker(description='Start Time')
+    end_time_picker = DatePicker(description='End Time')
+
+    # Display the date pickers
+    display(start_time_picker)
+    display(end_time_picker)
+
+    # Create a button for the user to click when they have picked the dates
+    button = Button(description='Done')
+    display(button)
+
+    # Define a function to execute when the button is clicked
+    def on_button_clicked(b):
+        # Get the picked dates
+        start_time = start_time_picker.value
+        end_time = end_time_picker.value
+        connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
+
+        # Get the bounding box of the polygon
+        bbox = polygon.bounds
+
+        cube = (connection.load_collection(
+            "SENTINEL2_L2A",
+            temporal_extent=[start_time, end_time],
+            spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
+            bands=["B02", "B03", "B04"]))
+
+        cube_b234_reduced = cube.mean_time()
+
+        def scale_function(x: ProcessBuilder):
+            return x.linear_scale_range(0, 6000, 0, 255)
+
+        cube_b234_reduced_lin = cube_b234_reduced.apply(scale_function)
+
+        res = cube_b234_reduced_lin.save_result(format="GTIFF", options={
+            "red": "B4",
+            "green": "B3",
+            "blue": "B2"
+        })
+
+        res.download('tcc_example.tiff', format='GTIFF')
+        BCET.plot_result_bcet('tcc_example.tiff')
+        LCE.plot_result('tcc_example.tiff', 10)
+
+    button.on_click(on_button_clicked)

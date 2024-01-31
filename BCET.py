@@ -59,6 +59,4 @@ def plot_result_bcet(file_path):
         axs[1, 0].hist(img[:, :, i].flatten(), bins=256, color=color, alpha=0.5)
         axs[1, 1].hist(Output[:, :, i].flatten(), bins=256, color=color, alpha=0.5)
 
-    axs[1, 0].set_title('Histogram of the Input Image')
-    axs[1, 1].set_title('Histogram of the Image after BCET')
     plt.show()
