@@ -14,13 +14,12 @@ def plot_result(file_path, percent):
     # Original image
     original = data_array.copy()
 
-    min_val = np.percentile(data_array, percent)
-    max_val = np.percentile(data_array, 100 - percent)
-    data_array = np.clip(data_array, min_val, max_val)
-    data_array = ((data_array - min_val) / (max_val - min_val)) * 255
-
-    # Enhanced image
-    enhanced = data_array
+    # Perform Linear Contrast Enhancement
+    min_val = np.percentile(original, percent)
+    max_val = np.percentile(original, 100 - percent)
+    enhanced = (original - min_val) / (max_val - min_val)
+    enhanced[enhanced < 0] = 0
+    enhanced[enhanced > 1] = 1
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 

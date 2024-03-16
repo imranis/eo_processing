@@ -1,55 +1,133 @@
 import openeo
-from ipywidgets import Button, DatePicker
 import LCE
 import BCET
 from openeo.processes import ProcessBuilder
 import matplotlib.pyplot as plt
 import xarray as xr
 
-# Create date picker widgets for the start and end time
-start_time_picker = DatePicker(description='Start Time')
-end_time_picker = DatePicker(description='End Time')
+
+def nbr(polygon, start_time, end_time):
+    # Define a function to execute when the button is clicked
+    connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
+
+    # Get the bounding box of the polygon
+    bbox = polygon.bounds
+
+    cube = (connection.load_collection(
+        "SENTINEL2_L2A",
+        temporal_extent=[start_time, end_time],
+        spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
+        bands=["B08", "B12"]))
+
+    cube_b812_reduced = cube.mean_time()
+
+    def nbr_function(x: ProcessBuilder):
+        nir = x.array_element(0)  # B08
+        swir = x.array_element(1)  # B12
+        return (nir - swir) / (nir + swir)
+
+    cube_nbr = cube_b812_reduced.apply(nbr_function)
+
+    res = cube_nbr.save_result(format="GTIFF")
+
+    res.download('nbr_example.tiff', format='GTIFF')
+    BCET.plot_result_bcet('nbr_example.tiff')
+    LCE.plot_result('nbr_example.tiff', 5)
 
 
-# Create a button for the user to click when they have picked the dates
-button = Button(description='Done')
+def ndvi(polygon, start_time, end_time):
+    # Define a function to execute when the button is clicked
+    connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
+
+    # Get the bounding box of the polygon
+    bbox = polygon.bounds
+
+    cube = (connection.load_collection(
+        "SENTINEL2_L2A",
+        temporal_extent=[start_time, end_time],
+        spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
+        bands=["B04", "B08"]))
+
+    cube_b48_reduced = cube.mean_time()
+
+    def ndvi_function(x: ProcessBuilder):
+        nir = x.array_element(1)  # B08
+        red = x.array_element(0)  # B04
+
+        return (nir - red)/(nir + red)
+
+    cube_nbr = cube_b48_reduced.apply(ndvi_function)
+
+    res = cube_nbr.save_result(format="GTIFF")
+
+    res.download('nbr_example.tiff', format='GTIFF')
+    BCET.plot_result_bcet('nbr_example.tiff')
+    LCE.plot_result('nbr_example.tiff', 5)
 
 
 def tcc(polygon, start_time, end_time):
     # Define a function to execute when the button is clicked
-    def on_button_clicked(b):
-        connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
+    connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
 
-        # Get the bounding box of the polygon
-        bbox = polygon.bounds
+    # Get the bounding box of the polygon
+    bbox = polygon.bounds
 
-        cube = (connection.load_collection(
-            "SENTINEL2_L2A",
-            temporal_extent=[start_time, end_time],
-            spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
-            bands=["B02", "B03", "B04"]))
+    cube = (connection.load_collection(
+        "SENTINEL2_L2A",
+        temporal_extent=[start_time, end_time],
+        spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
+        bands=["B02", "B03", "B04"]))
 
-        cube_b234_reduced = cube.mean_time()
+    cube_b234_reduced = cube.mean_time()
 
-        def scale_function(x: ProcessBuilder):
-            return x.linear_scale_range(0, 6000, 0, 255)
+    def scale_function(x: ProcessBuilder):
+        return x.linear_scale_range(0, 6000, 0, 255)
 
-        cube_b234_reduced_lin = cube_b234_reduced.apply(scale_function)
+    cube_b234_reduced_lin = cube_b234_reduced.apply(scale_function)
 
-        res = cube_b234_reduced_lin.save_result(format="GTIFF", options={
-            "red": "B4",
-            "green": "B3",
-            "blue": "B2"
-        })
+    res = cube_b234_reduced_lin.save_result(format="GTIFF", options={
+        "red": "B4",
+        "green": "B3",
+        "blue": "B2"
+    })
 
-        res.download('tcc_example.tiff', format='GTIFF')
-        BCET.plot_result_bcet('tcc_example.tiff')
-        LCE.plot_result('tcc_example.tiff', 10)
-
-    button.on_click(on_button_clicked)
+    res.download('tcc_example.tiff', format='GTIFF')
+    BCET.plot_result_bcet('tcc_example.tiff')
+    LCE.plot_result('tcc_example.tiff', 5)
 
 
-def sar(polygon, start_time, end_time):
+def fcc(polygon, start_time, end_time):
+    # Define a function to execute when the button is clicked
+    connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
+
+    # Get the bounding box of the polygon
+    bbox = polygon.bounds
+
+    cube = (connection.load_collection(
+        "SENTINEL2_L2A",
+        temporal_extent=[start_time, end_time],
+        spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
+        bands=["B03", "B04", "B08"]))
+
+    cube_b348_reduced = cube.mean_time()
+
+    def scale_function(x: ProcessBuilder):
+        return x.linear_scale_range(0, 6000, 0, 255)
+
+    cube_b348_reduced_lin = cube_b348_reduced.apply(scale_function)
+
+    res = cube_b348_reduced_lin.save_result(format="GTIFF", options={
+        "red": "B8",
+        "green": "B4",
+        "blue": "B3"
+    })
+
+    res.download('fcc_example.tiff', format='GTIFF')
+    BCET.plot_result_bcet('fcc_example.tiff')
+    LCE.plot_result('fcc_example.tiff', 5)
+
+
+def sar(polygon, start_time, end_time, button):
     # Define a function to execute when the button is clicked
     def on_button_clicked(b):
         connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
