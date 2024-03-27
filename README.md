@@ -34,6 +34,10 @@ git clone <repository_url>
 ```
 cd <repository_name>
 ```
+* Install dependencies
+```
+pip install -r requirements.txt
+```
 * Run the Project
 ```
 jupyter notebook run.ipynb
