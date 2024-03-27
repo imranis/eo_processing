@@ -26,7 +26,8 @@ def read_this(file_path):
     with MemoryFile(data) as memfile:
         with memfile.open() as dataset:
             data_array = dataset.read()
-
+# if image is RGB, data_array has form (band, height, width)
+# if image is grayscale, data_array has form (height, width)
     # Check if the image is grayscale or RGB
     if data_array.shape[0] == 1:  # Grayscale image
         data_array = data_array[0]
