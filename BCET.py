@@ -4,10 +4,13 @@ import numpy as np
 
 
 def BCET(Gmin, Gmax, Gmean, img):
-    Lmin = np.min(img)
-    Lmax = np.max(img)
-    Lmean = np.mean(img)
-    LMssum = np.mean(np.square(img))
+    # Mask out zero values
+    img_nonzero = img[img != 0]
+
+    Lmin = np.min(img_nonzero)
+    Lmax = np.max(img_nonzero)
+    Lmean = np.mean(img_nonzero)
+    LMssum = np.mean(np.square(img_nonzero))
 
     bnum = Lmax**2 * (Gmean - Gmin) - LMssum * (Gmax - Gmin) + Lmin**2 * (Gmax - Gmean)
     bden = 2 * (Lmax * (Gmean - Gmin) - Lmean * (Gmax - Gmin) + Lmin * (Gmax - Gmean))
@@ -16,7 +19,9 @@ def BCET(Gmin, Gmax, Gmean, img):
     a = (Gmax - Gmin) / ((Lmax - Lmin) * (Lmax + Lmin - 2 * b))
     c = Gmin - a * (Lmin - b)**2
 
-    y = a * (img - b)**2 + c
+    # Apply BCET only to non-zero values
+    y = np.zeros_like(img)
+    y[img != 0] = a * (img[img != 0] - b)**2 + c
     return y.astype(np.uint8)
 
 

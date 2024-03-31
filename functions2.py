@@ -12,11 +12,11 @@ def nbr(polygon, start_time, end_time):
     # Get the bounding box of the polygon
     bbox = polygon.bounds
 
-    cube = (connection.load_collection(
+    cube = connection.load_collection(
         "SENTINEL2_L2A",
         temporal_extent=[start_time, end_time],
         spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
-        bands=["B08", "B12"]))
+        bands=["B08", "B12"])
 
     cube_b812_reduced = cube.mean_time()
 
@@ -180,3 +180,45 @@ def sar(polygon, start_time, end_time):
     ax2.imshow(S1_ard.VH[0].values, cmap='Greys_r', vmin=-30, vmax=30)
     ax2.set_title('VH gamma0')
     plt.show()
+
+
+def tcc_masked(polygon, start_time, end_time):
+    # Define a function to execute when the button is clicked
+    connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
+
+    # Get the bounding box of the polygon
+    bbox = polygon.bounds
+
+    cube = connection.load_collection(
+        "SENTINEL2_L2A",
+        temporal_extent=[start_time, end_time],
+        spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
+        bands=["B02", "B03", "B04", "SCL"],
+        max_cloud_cover=20)
+
+    scl_band = cube.band("SCL")
+    cloud_mask = (scl_band == 3) | (scl_band == 8) | (scl_band == 9)
+    cloud_mask = cloud_mask.resample_cube_spatial(cube)
+    cube_masked = cube.mask(cloud_mask)
+    composite_masked = cube_masked.mean_time()
+
+    def scale_function(x: ProcessBuilder):
+        return x.linear_scale_range(0, 6000, 0, 255)
+
+    composite_masked = composite_masked.apply(scale_function)
+
+    res = composite_masked.save_result(format="GTIFF", options={
+        "red": "B4",
+        "green": "B3",
+        "blue": "B2"
+    })
+
+    res_png = composite_masked.save_result(format="PNG", options={
+        "red": "B4",
+        "green": "B3",
+        "blue": "B2"
+    })
+
+    res_png.download('tcc_masked_example.png', format='PNG')
+    res.download('tcc_masked_example.tiff', format='GTIFF')
+    BCET.plot_result_bcet('tcc_masked_example.tiff')
