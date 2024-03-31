@@ -1,73 +1,101 @@
-import matplotlib.pyplot as plt
-from rasterio.io import MemoryFile
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import netCDF4 as nc
 
 
-def BCET(Gmin, Gmax, Gmean, img):
-    # Mask out zero values
-    img_nonzero = img[img != 0]
+def bcet(Gmin, Gmax, Gmean, x):
+    x = x.astype(float)
+    mask = (x != 0)  # Create a mask for non-black pixels
+    x_masked = x[mask]
 
-    Lmin = np.min(img_nonzero)
-    Lmax = np.max(img_nonzero)
-    Lmean = np.mean(img_nonzero)
-    LMssum = np.mean(np.square(img_nonzero))
+    Lmin = np.min(x_masked)
+    Lmax = np.max(x_masked)
+    Lmean = np.mean(x_masked)
+    LMssum = np.mean(x_masked**2)
 
     bnum = Lmax**2 * (Gmean - Gmin) - LMssum * (Gmax - Gmin) + Lmin**2 * (Gmax - Gmean)
     bden = 2 * (Lmax * (Gmean - Gmin) - Lmean * (Gmax - Gmin) + Lmin * (Gmax - Gmean))
 
     b = bnum / bden
+
     a = (Gmax - Gmin) / ((Lmax - Lmin) * (Lmax + Lmin - 2 * b))
+
     c = Gmin - a * (Lmin - b)**2
 
-    # Apply BCET only to non-zero values
-    y = np.zeros_like(img)
-    y[img != 0] = a * (img[img != 0] - b)**2 + c
-    return y.astype(np.uint8)
+    y = a * (x - b)**2 + c
+    return np.uint8(y)
 
 
-def read_this(file_path):
-    with open(file_path, 'rb') as f:
-        data = f.read()
-    with MemoryFile(data) as memfile:
-        with memfile.open() as dataset:
-            data_array = dataset.read()
-# if image is RGB, data_array has form (band, height, width)
-# if image is grayscale, data_array has form (height, width)
-    # Check if the image is grayscale or RGB
-    if data_array.shape[0] == 1:  # Grayscale image
-        data_array = data_array[0]
-        img_type = 'grayscale'
-    else:  # RGB image
-        data_array = data_array.transpose((1, 2, 0))
-        img_type = 'rgb'
+def plot_bcet(nc_file_path):
+    # Load the NetCDF file
+    nc_data = nc.Dataset(nc_file_path)
 
-    return data_array, img_type
+    # for var_name in nc_data.variables:
+    #     print(var_name)
 
+    variable_names = list(nc_data.variables.keys())
 
-def plot_result_bcet(file_path):
-    img, img_type = read_this(file_path)
+    # Read the RGB bands data
+    blue = nc_data.variables[variable_names[3]][:]
+    green = nc_data.variables[variable_names[4]][:]
+    red = nc_data.variables[variable_names[5]][:]
+
+    # Define BCET parameters
     Gmin = 0
     Gmax = 255
-    Gmean = 120
+    Gmean = 110
 
-    # Process the image based on its type
-    if img_type == 'grayscale':  # Grayscale image
-        Output = BCET(Gmin, Gmax, Gmean, img)
-    else:  # RGB image
-        R = BCET(Gmin, Gmax, Gmean, img[:, :, 0])
-        G = BCET(Gmin, Gmax, Gmean, img[:, :, 1])
-        B = BCET(Gmin, Gmax, Gmean, img[:, :, 2])
-        Output = np.stack([R, G, B], axis=2)
+    # Apply BCET to each RGB band
+    bcet_blue = bcet(Gmin, Gmax, Gmean, blue)
+    bcet_green = bcet(Gmin, Gmax, Gmean, green)
+    bcet_red = bcet(Gmin, Gmax, Gmean, red)
 
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-    axs[0, 0].imshow(img, cmap='gray' if img_type == 'grayscale' else None)
-    axs[0, 0].set_title('Input Image')
-    axs[0, 1].imshow(Output, cmap='gray' if img_type == 'grayscale' else None)
-    axs[0, 1].set_title('Image after BCET')
+    # Combine the three bands into one RGB image
+    rgb_image = np.dstack((bcet_red, bcet_green, bcet_blue))
 
-    colors = ['r', 'g', 'b']
-    for i, color in enumerate(colors):
-        axs[1, 0].hist(img.flatten(), bins=256, color=color, alpha=0.5)
-        axs[1, 1].hist(Output.flatten(), bins=256, color=color, alpha=0.5)
+    # Plot the RGB image and its histogram
+    fig, axes = plt.subplots(2, 1, figsize=(8, 10))
 
+    axes[0].imshow(rgb_image)
+    axes[0].set_title("Masked Image after BCET")
+    axes[0].axis('off')
+
+    sns.histplot(rgb_image[..., 0].ravel(), bins=50, color='r', label='Red', ax=axes[1], alpha=0.7)
+    sns.histplot(rgb_image[..., 1].ravel(), bins=50, color='g', label='Green', ax=axes[1], alpha=0.7)
+    sns.histplot(rgb_image[..., 2].ravel(), bins=50, color='b', label='Blue', ax=axes[1], alpha=0.7)
+    axes[1].set_title("Image Histogram")
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_input(nc_file_path):
+    # Load the NetCDF file
+    nc_data = nc.Dataset(nc_file_path)
+
+    variable_names = list(nc_data.variables.keys())
+
+    # Read the RGB bands data
+    blue = nc_data.variables[variable_names[3]][:]
+    green = nc_data.variables[variable_names[4]][:]
+    red = nc_data.variables[variable_names[5]][:]
+
+    # Combine the three bands into one RGB image
+    rgb_image = np.dstack((red, green, blue))
+
+    # Plot the RGB image and its histogram
+    fig, axes = plt.subplots(2, 1, figsize=(8, 10))
+
+    axes[0].imshow(rgb_image)
+    axes[0].set_title("Unmasked Image")
+
+    sns.histplot(rgb_image[..., 0].ravel(), bins=50, color='r', label='Red', ax=axes[1], alpha=0.7)
+    sns.histplot(rgb_image[..., 1].ravel(), bins=50, color='g', label='Green', ax=axes[1], alpha=0.7)
+    sns.histplot(rgb_image[..., 2].ravel(), bins=50, color='b', label='Blue', ax=axes[1], alpha=0.7)
+    axes[1].set_title("Image Histogram")
+    axes[1].legend()
+
+    plt.tight_layout()
     plt.show()

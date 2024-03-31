@@ -1,5 +1,6 @@
 import openeo
 import BCET
+import LCE
 from openeo.processes import ProcessBuilder
 import matplotlib.pyplot as plt
 import xarray as xr
@@ -32,7 +33,7 @@ def nbr(polygon, start_time, end_time):
 
     res_png.download('nbr_example.png', format='PNG')
     res.download('nbr_example.tiff', format='GTIFF')
-    BCET.plot_result_bcet('nbr_example.tiff')
+    LCE.plot_result('nbr_example.tiff', 5)
 
 
 def ndvi(polygon, start_time, end_time):
@@ -63,7 +64,7 @@ def ndvi(polygon, start_time, end_time):
 
     res_png.download('ndvi_example.png', format='PNG')
     res.download('ndvi_example.tiff', format='GTIFF')
-    BCET.plot_result_bcet('ndvi_example.tiff')
+    LCE.plot_result('ndvi_example.tiff', 5)
 
 
 def tcc(polygon, start_time, end_time):
@@ -86,11 +87,7 @@ def tcc(polygon, start_time, end_time):
 
     cube_b234_reduced_lin = cube_b234_reduced.apply(scale_function)
 
-    res = cube_b234_reduced_lin.save_result(format="GTIFF", options={
-        "red": "B4",
-        "green": "B3",
-        "blue": "B2"
-    })
+    cube_b234_reduced_lin.download('tcc_example.nc')
 
     res_png = cube_b234_reduced_lin.save_result(format="PNG", options={
         "red": "B4",
@@ -99,8 +96,7 @@ def tcc(polygon, start_time, end_time):
     })
 
     res_png.download('tcc_example.png', format='PNG')
-    res.download('tcc_example.tiff', format='GTIFF')
-    BCET.plot_result_bcet('tcc_example.tiff')
+    BCET.plot_input('tcc_example.nc')
 
 
 def fcc(polygon, start_time, end_time):
@@ -123,11 +119,7 @@ def fcc(polygon, start_time, end_time):
 
     cube_b348_reduced_lin = cube_b348_reduced.apply(scale_function)
 
-    res = cube_b348_reduced_lin.save_result(format="GTIFF", options={
-        "red": "B8",
-        "green": "B4",
-        "blue": "B3"
-    })
+    cube_b348_reduced_lin.download('fcc_example.nc')
 
     res_png = cube_b348_reduced_lin.save_result(format="PNG", options={
         "red": "B4",
@@ -136,8 +128,7 @@ def fcc(polygon, start_time, end_time):
     })
 
     res_png.download('fcc_example.png', format='PNG')
-    res.download('fcc_example.tiff', format='GTIFF')
-    BCET.plot_result_bcet('fcc_example.tiff')
+    BCET.plot_input('fcc_example.nc')
 
 
 def sar(polygon, start_time, end_time):
@@ -172,7 +163,7 @@ def sar(polygon, start_time, end_time):
 
     job_bs.get_results()
 
-    S1_ard = xr.open_dataset("sar_example.nc")
+    S1_ard = xr.open_dataset("sar_example.nc", engine='netcdf4')
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 20))
     ax1.imshow(S1_ard.VV[0].values, cmap='Greys_r', vmin=-30, vmax=30)
@@ -193,8 +184,7 @@ def tcc_masked(polygon, start_time, end_time):
         "SENTINEL2_L2A",
         temporal_extent=[start_time, end_time],
         spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
-        bands=["B02", "B03", "B04", "SCL"],
-        max_cloud_cover=20)
+        bands=["B02", "B03", "B04", "SCL"])
 
     scl_band = cube.band("SCL")
     cloud_mask = (scl_band == 3) | (scl_band == 8) | (scl_band == 9)
@@ -207,11 +197,7 @@ def tcc_masked(polygon, start_time, end_time):
 
     composite_masked = composite_masked.apply(scale_function)
 
-    res = composite_masked.save_result(format="GTIFF", options={
-        "red": "B4",
-        "green": "B3",
-        "blue": "B2"
-    })
+    composite_masked.download('tcc_masked_example_cdf.nc')
 
     res_png = composite_masked.save_result(format="PNG", options={
         "red": "B4",
@@ -220,5 +206,40 @@ def tcc_masked(polygon, start_time, end_time):
     })
 
     res_png.download('tcc_masked_example.png', format='PNG')
-    res.download('tcc_masked_example.tiff', format='GTIFF')
-    BCET.plot_result_bcet('tcc_masked_example.tiff')
+    BCET.plot_bcet('tcc_masked_example_cdf.nc')
+
+
+def fcc_masked(polygon, start_time, end_time):
+    # Define a function to execute when the button is clicked
+    connection = openeo.connect(url='openeo.dataspace.copernicus.eu').authenticate_oidc()
+
+    # Get the bounding box of the polygon
+    bbox = polygon.bounds
+
+    cube = (connection.load_collection(
+        "SENTINEL2_L2A",
+        temporal_extent=[start_time, end_time],
+        spatial_extent=dict(zip(["west", "south", "east", "north"], bbox)),
+        bands=["B03", "B04", "B08", "SCL"]))
+
+    scl_band = cube.band("SCL")
+    cloud_mask = (scl_band == 3) | (scl_band == 8) | (scl_band == 9)
+    cloud_mask = cloud_mask.resample_cube_spatial(cube)
+    cube_masked = cube.mask(cloud_mask)
+    composite_masked = cube_masked.mean_time()
+
+    def scale_function(x: ProcessBuilder):
+        return x.linear_scale_range(0, 6000, 0, 255)
+
+    composite_masked = composite_masked.apply(scale_function)
+
+    composite_masked.download('fcc_masked_example.nc')
+
+    res_png = composite_masked.save_result(format="PNG", options={
+        "red": "B4",
+        "green": "B3",
+        "blue": "B2"
+    })
+
+    res_png.download('fcc_masked_example.png', format='PNG')
+    BCET.plot_bcet('fcc_masked_example.nc')
