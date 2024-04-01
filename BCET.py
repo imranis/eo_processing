@@ -6,7 +6,7 @@ import netCDF4 as nc
 
 def bcet(Gmin, Gmax, Gmean, x):
     x = x.astype(float)
-    mask = (x != 0)  # Create a mask for non-black pixels
+    mask = (x != 255)
     x_masked = x[mask]
 
     Lmin = np.min(x_masked)
@@ -55,15 +55,15 @@ def plot_bcet(nc_file_path):
     rgb_image = np.dstack((bcet_red, bcet_green, bcet_blue))
 
     # Plot the RGB image and its histogram
-    fig, axes = plt.subplots(2, 1, figsize=(8, 10))
+    fig, axes = plt.subplots(2, 1, figsize=(12, 10))
 
     axes[0].imshow(rgb_image)
     axes[0].set_title("Masked Image after BCET")
     axes[0].axis('off')
 
-    sns.histplot(rgb_image[..., 0].ravel(), bins=50, color='r', label='Red', ax=axes[1], alpha=0.7)
-    sns.histplot(rgb_image[..., 1].ravel(), bins=50, color='g', label='Green', ax=axes[1], alpha=0.7)
-    sns.histplot(rgb_image[..., 2].ravel(), bins=50, color='b', label='Blue', ax=axes[1], alpha=0.7)
+    sns.histplot(rgb_image[..., 0].ravel(), bins=255, color='r', label='Red', ax=axes[1], alpha=0.5)
+    sns.histplot(rgb_image[..., 1].ravel(), bins=255, color='g', label='Green', ax=axes[1], alpha=0.5)
+    sns.histplot(rgb_image[..., 2].ravel(), bins=255, color='b', label='Blue', ax=axes[1], alpha=0.5)
     axes[1].set_title("Image Histogram")
     axes[1].legend()
 
@@ -86,14 +86,14 @@ def plot_input(nc_file_path):
     rgb_image = np.dstack((red, green, blue))
 
     # Plot the RGB image and its histogram
-    fig, axes = plt.subplots(2, 1, figsize=(8, 10))
+    fig, axes = plt.subplots(2, 1, figsize=(12, 10))
 
     axes[0].imshow(rgb_image)
     axes[0].set_title("Unmasked Image")
 
-    sns.histplot(rgb_image[..., 0].ravel(), bins=50, color='r', label='Red', ax=axes[1], alpha=0.7)
-    sns.histplot(rgb_image[..., 1].ravel(), bins=50, color='g', label='Green', ax=axes[1], alpha=0.7)
-    sns.histplot(rgb_image[..., 2].ravel(), bins=50, color='b', label='Blue', ax=axes[1], alpha=0.7)
+    sns.histplot(rgb_image[..., 0].ravel(), bins=255, color='r', label='Red', ax=axes[1], alpha=0.5)
+    sns.histplot(rgb_image[..., 1].ravel(), bins=255, color='g', label='Green', ax=axes[1], alpha=0.5)
+    sns.histplot(rgb_image[..., 2].ravel(), bins=255, color='b', label='Blue', ax=axes[1], alpha=0.5)
     axes[1].set_title("Image Histogram")
     axes[1].legend()
 

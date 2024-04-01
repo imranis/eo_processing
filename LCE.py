@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from rasterio.io import MemoryFile
 from rasterio.plot import show, show_hist
 import numpy as np
+import seaborn as sns
 
 
 def plot_result(file_path, percent):
@@ -31,8 +32,7 @@ def plot_result(file_path, percent):
 
     # Plot histograms
     axs[1, 0].set_title('Histogram of the Input Image')
-    show_hist(original, ax=axs[1, 0])
+    show_hist(original, bins=255, ax=axs[1, 0], alpha=0.7)
     axs[1, 1].set_title('Histogram of the Image after LCE')
-    show_hist(enhanced, ax=axs[1, 1])
-
+    show_hist(enhanced, bins=255, ax=axs[1, 1], alpha=0.8)
     plt.show()
